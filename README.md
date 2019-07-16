@@ -11,6 +11,7 @@ https://github.com/herctech/bash-slacknotifier
 
 Usage: slackNotifier <action> <action_parameters>
 On Ubuntu or Debian install JQ by running 'sudo apt-get install jq'!
+On MacOS install JQ by first installing brew and then running 'brew install jq'!
 
 ---------------------------------------------------------------------------------
     AVAILABLE ACTIONS
