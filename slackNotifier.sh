@@ -63,6 +63,11 @@ remove  o   Removes a message in the specified channel
             ${COLOR_RED}Notes:
                 Either 'ts' or 'payload' should be provided!${COLOR_END}
 
+custom  o   Sends a custom payload to a custom endpoint
+            Usage: slackNotifier custom channel= payload=
+            ${COLOR_RED}Notes:
+                In this case the channel should be set to the API endpoint (Eg: chat.postMessage)!${COLOR_END}
+
 parse   o   Parses the given payload to extract certain values
             Usage: slackNotifier parse payload= field=
             ${COLOR_RED}Notes:
@@ -78,6 +83,7 @@ token       - The oAuth token to be used to send messages. You can skip this if 
               it system wide
 
 channel     - The channel to which the message will be sent
+            - When used with 'custom' the channel should be set to the API endpoint (Eg: chat.postMessage)
 
 text        - The text of the message to be sent ( Cannot be used together with 'attachments' )
 
@@ -87,7 +93,8 @@ attachments - The attachments to be sent with the message ( Overrides 'text' and
 
 ts          - The reference used to reply to, edit or remove a message
 
-payload     - When used with 'reply' action this has to be the payload of the first message in the thread
+payload     - When used with 'custom' the payload will be sent as is to SlackAPI
+            - When used with 'reply' action this has to be the payload of the first message in the thread
             - When used with 'edit' or 'remove' actions this needs to be the payload of the message to edit or remove
             - When used with 'parse' action this sets the payload to be parsed (JSON format, see JQ for more details)
 
@@ -165,7 +172,7 @@ function getJSONValue {
     local path="$1"
     local json="$2"
 
-    echo ${json} | jq ${path}
+    echo ${json} | jq --raw-output ${path}
 }
 
 function checkChannelValue {
@@ -195,20 +202,18 @@ function buildSendMessagePayload {
 
     # Just $TEXT passed in
     if [[ -n "$TEXT" && -z "$ATTACHMENTS" && -z "$COLOR" ]]; then
-        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg c "$CHANNEL" --arg s "$TS" '{"channel": $c, "text": $t, "ts": $s}')
+        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg c "$CHANNEL" --arg s "$TS" '{"channel": $c, "text": $t, "thread_ts": $s, "ts": $s, "mrkdwn": true}')
     fi
 
     # $TEXT and $COLOR passed in
     if [[ -n "$TEXT" && -z "$ATTACHMENTS" && -n "$COLOR" ]]; then
-        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg o "$COLOR"  --arg c "$CHANNEL" --arg s "$TS" '{"channel": $c, "attachments": [{"color": $o, "text": $t, "ts": $s}]}')
+        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg o "$COLOR"  --arg c "$CHANNEL" --arg s "$TS" '{"channel": $c, "thread_ts": $s, "ts": $s, "attachments": [{"color": $o, "text": $t}], "mrkdwn": true}')
     fi
 
     # Just $ATTACHMENTS passed in
     if [[ -z "$TEXT" && -n "$ATTACHMENTS" && -z "$COLOR" ]]; then
-        MESSAGE_PAYLOAD=$(jq -n --arg c "$CHANNEL"  --argjson a "$ATTACHMENTS" --arg s "$TS" '{"channel": $c, "attachments": $a, "ts": $s}')
+        MESSAGE_PAYLOAD=$(jq -n --arg c "$CHANNEL"  --argjson a "$ATTACHMENTS" --arg s "$TS" '{"channel": $c, , "thread_ts": $s, "ts": $s, "attachments": $a, "mrkdwn": true}')
     fi
-
-    exit
 }
 
 function buildRemoveMessagePayload {
@@ -228,8 +233,8 @@ function getTSValue {
     fi
 
     if [[ -z "$TS" ]]; then
-        TS=$(getJSONValue "ts" "${JSON_PAYLOAD}")
-        CHANNEL=$(getJSONValue "channel" "${JSON_PAYLOAD}")
+        TS="$(getJSONValue ".ts" "${JSON_PAYLOAD}")"
+        CHANNEL=$(getJSONValue ".channel" "${JSON_PAYLOAD}")
     else
         CHANNEL=convertChannelNameToID
     fi
@@ -292,12 +297,12 @@ checkJQIsInstalled
 SELECTED_ACTION="$1"
 
 # If action wasn't passed in show help page
-if [[ -z ${SELECTED_ACTION} ]]; then
+if [[ -z ${SELECTED_ACTION} || ${SELECTED_ACTION} = "help" ]]; then
     printHelp
 fi
 
 # Check action is allowed
-if [[ "$(listIncludesItem 'help send reply edit remove parse token' ${SELECTED_ACTION})" = "no" ]]; then
+if [[ "$(listIncludesItem 'help custom send reply edit remove parse token' ${SELECTED_ACTION})" = "no" ]]; then
     outputError "Action '${SELECTED_ACTION}' is unknown!"
     exit;
 fi
@@ -320,19 +325,13 @@ do
             field)          JSON_FIELD=${VALUE} ;;
             *)
                 # Easy way to ignore actions from being parsed again
-                if [[ "$(listIncludesItem 'help send reply edit remove parse token' ${KEY})" = "no" ]]; then
+                if [[ "$(listIncludesItem 'help custom send reply edit remove parse token' ${KEY})" = "no" ]]; then
                     outputError "Unknown argument '$KEY'!"
                     exit;
                 fi
             ;;
     esac
 done
-
-# If the selected action is help printHelp and exit
-if [[ ${SELECTED_ACTION} = "help" ]]; then
-    printHelp
-    exit 0
-fi
 
 # If the selected action is parse run it and exit
 if [[ ${SELECTED_ACTION} = "parse" ]]; then
@@ -341,14 +340,14 @@ if [[ ${SELECTED_ACTION} = "parse" ]]; then
 fi
 
 # If token wasn't passed in means it should be in the file, try to fetch it
-if [[ -z ${SLACK_TOKEN} ]]; then
-    getSlackToken
-fi
-
-# If token wasn't passed in means it should be in the file, try to fetch it
 if [[ ${SELECTED_ACTION} = "token" ]]; then
     setToken
     exit 0
+fi
+
+# If token wasn't passed in means it should be in the file, try to fetch it
+if [[ -z ${SLACK_TOKEN} ]]; then
+    getSlackToken
 fi
 
 # Check the token isn't empty
@@ -358,26 +357,32 @@ checkTokenExists
 checkChannelValue
 
 # Run the selected action
-case "$SELECTED_ACTION" in
+case "${SELECTED_ACTION}" in
     send)
         clearTSAndJSONPayload
         buildSendMessagePayload
-        sendMessage
+        echo $(sendMessage)
     ;;
     reply)
         getTSValue
         buildSendMessagePayload
-        replyToMessage
+        echo $(replyToMessage)
     ;;
     edit)
         getTSValue
         buildSendMessagePayload
-        editMessage
+        echo $(editMessage)
     ;;
     remove)
         getTSValue
         buildRemoveMessagePayload
-        removeMessage
+        echo $(removeMessage)
+    ;;
+    custom)
+        echo $(makeRequest "${CHANNEL}" "${JSON_PAYLOAD}")
+    ;;
+    *)
+        outputError "Something went wrong, unknown action ${SELECTED_ACTION}!"
     ;;
 esac
 
