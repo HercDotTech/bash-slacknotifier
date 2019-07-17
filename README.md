@@ -1,3 +1,5 @@
+### Main Script
+
 ```
  ____  _            _    _   _       _   _  __ _
 / ___|| | __ _  ___| | _| \ | | ___ | |_(_)/ _(_) ___ _ __
@@ -91,5 +93,38 @@ field       - This sets the 'path' of the field to be extracted when used with '
 
 broadcast   - When replying to messages setting this to 'true' will cause the message to also be posted in the main
               channel
+```
+### Examples Script
+```
+ ____  _            _    _   _       _   _  __ _
+/ ___|| | __ _  ___| | _| \ | | ___ | |_(_)/ _(_) ___ _ __
+\___ \| |/ _  |/ __| |/ /  \| |/ _ \| __| | |_| |/ _ \ '__|
+ ___) | | (_| | (__|   || |\  | (_) | |_| |  _| |  __/ |
+|____/|_|\__,_|\___|_|\_\_| \_|\___/ \__|_|_| |_|\___|_|
+---------------------------------------------------------------------------------
+CREATED BY: HercTech | LICENCE: GNU AGPLv3
+https://github.com/herctech/bash-slacknotifier
+---------------------------------------------------------------------------------
 
+This is the examples script. It does require you to have a Slack APP oAuth BOT token ready before you can actually use
+the calls to this script to test the main one.
+
+For more details run 'slackNotifier help'
+
+Usage: slackExamples <example> <channel_name> <token>
+
+
+---------------------------------------------------------------------------------
+    AVAILABLE EXAMPLES
+---------------------------------------------------------------------------------
+
+send    o   Will send a message to the specified channel
+
+reply   o   Will send a message to the specified channel and then a reply to it
+
+edit    o   Will send a message to the specified channel and 10 seconds later it will edit it
+
+remove  o   Will send a message to the specified channel and 10 seconds later it will remove it
+
+custom  o   Will send a message to the specified channel using the custom functionality
 ```

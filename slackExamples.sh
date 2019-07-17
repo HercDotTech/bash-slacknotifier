@@ -89,6 +89,19 @@ function replyToMessage {
     local response=$(./slackNotifier.sh reply channel="${channel}" token="${token}" text="${text}" color="${color}" payload="${PAYLOAD}")
 }
 
+# EXAMPLE #2.a
+# This is how you would call the script to reply to a message
+# We are using the global PAYLOAD of the previous message and passing that to the reply call so that the script know which
+# message to reply to
+function replyToMessageAndChannel {
+    local text="Test reply!"
+    local color="danger"
+    local channel="${CHANNEL}"
+    local token="${TOKEN}"
+
+    local response=$(./slackNotifier.sh reply channel="${channel}" token="${token}" text="${text}" color="${color}" broadcast="true" payload="${PAYLOAD}")
+}
+
 # EXAMPLE #3
 # This is how you would call the script to edit a message
 # We are using the global PAYLOAD of the previous message and passing that to the reply call so that the script know which
@@ -153,7 +166,6 @@ case "${EXAMPLE}" in
     ;;
     remove)
         sendMessage
-
         echo "Waiting for 10 seconds ..."
         sleep 10
         removeMessage

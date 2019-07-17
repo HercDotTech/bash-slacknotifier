@@ -200,19 +200,23 @@ function buildSendMessagePayload {
         exit 3
     fi
 
+    if [[ -z "$BROADCAST" ]]; then
+        BROADCAST="false"
+    fi
+
     # Just $TEXT passed in
     if [[ -n "$TEXT" && -z "$ATTACHMENTS" && -z "$COLOR" ]]; then
-        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg c "$CHANNEL" --arg s "$TS" '{"channel": $c, "text": $t, "thread_ts": $s, "ts": $s, "mrkdwn": true}')
+        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg c "$CHANNEL" --arg s "$TS" --arg rb "$BROADCAST" '{"channel": $c, "text": $t, "thread_ts": $s, "reply_broadcast": $rb, "ts": $s, "mrkdwn": true}')
     fi
 
     # $TEXT and $COLOR passed in
     if [[ -n "$TEXT" && -z "$ATTACHMENTS" && -n "$COLOR" ]]; then
-        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg o "$COLOR"  --arg c "$CHANNEL" --arg s "$TS" '{"channel": $c, "thread_ts": $s, "ts": $s, "attachments": [{"color": $o, "text": $t}], "mrkdwn": true}')
+        MESSAGE_PAYLOAD=$(jq -n --arg t "$TEXT" --arg o "$COLOR"  --arg c "$CHANNEL" --arg s "$TS" --arg rb "$BROADCAST" '{"channel": $c, "thread_ts": $s, "reply_broadcast": $rb, "ts": $s, "attachments": [{"color": $o, "text": $t}], "mrkdwn": true}')
     fi
 
     # Just $ATTACHMENTS passed in
     if [[ -z "$TEXT" && -n "$ATTACHMENTS" && -z "$COLOR" ]]; then
-        MESSAGE_PAYLOAD=$(jq -n --arg c "$CHANNEL"  --argjson a "$ATTACHMENTS" --arg s "$TS" '{"channel": $c, , "thread_ts": $s, "ts": $s, "attachments": $a, "mrkdwn": true}')
+        MESSAGE_PAYLOAD=$(jq -n --arg c "$CHANNEL"  --argjson a "$ATTACHMENTS" --arg s "$TS" --arg rb "$BROADCAST" '{"channel": $c, , "thread_ts": $s, "reply_broadcast": $rb, "ts": $s, "attachments": $a, "mrkdwn": true}')
     fi
 }
 
