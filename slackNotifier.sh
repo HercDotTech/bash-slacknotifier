@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 TEXT_BOLD="\e[1m"
 TEXT_RESET="\e[21m"
