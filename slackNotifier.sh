@@ -10,18 +10,18 @@ COLOR_END="\e[0m"
 
 
 function printHelp {
-    echo -e """$COLOR_BLUE
+    echo -e """${COLOR_GREEN}
  ____  _            _    _   _       _   _  __ _
 / ___|| | __ _  ___| | _| \ | | ___ | |_(_)/ _(_) ___ _ __
-\___ \| |/ _\`|/ __| |/ /  \| |/ _ \| __| | |_| |/ _ \ '__|
- ___) | | (_| | (__|   <| |\  | (_) | |_| |  _| |  __/ |
-|____/|_|\__,_|\___|_|\_\_| \_|\___/ \__|_|_| |_|\___|_|$COLOR_END$COLOR_GREEN
+\___ \| |/ _  |/ __| |/ /  \| |/ _ \| __| | |_| |/ _ \ '__|
+ ___) | | (_| | (__|   || |\  | (_) | |_| |  _| |  __/ |
+|____/|_|\__,_|\___|_|\_\_| \_|\___/ \__|_|_| |_|\___|_|
 ---------------------------------------------------------------------------------
 ${TEXT_BOLD}CREATED BY: HercTech | LICENCE: GNU AGPLv3${TEXT_RESET}
 https://github.com/herctech/bash-slacknotifier
 ---------------------------------------------------------------------------------
-$COLOR_END
-Usage: ${COLOR_GREEN}slackNotifier <action> <action_parameters>${COLOR_END}
+
+Usage: slackNotifier <action> <action_parameters>
 ${COLOR_BLUE}
 On Ubuntu or Debian:
     - install JQ by running 'sudo apt-get install jq'
@@ -30,12 +30,17 @@ On MacOS:
     - install brew (https://brew.sh/)
     - upgrade bash by running 'brew install bash'!
     - install JQ by running 'brew install jq'!
-${COLOR_END}
 $COLOR_GREEN
 ---------------------------------------------------------------------------------
     ${TEXT_BOLD}AVAILABLE ACTIONS${TEXT_RESET}
 ---------------------------------------------------------------------------------
 $COLOR_END
+token   o   Writes the given token to a file so it can be reused without having to pass it every time
+            Usage: slackNotifier token token=
+            ${COLOR_RED}Notes:
+                The token passed will be set system wide. Do not use this if you need to implement multiple tokens.
+                If the token is set this way it does not have to be passed on every call.
+
 send    o   Sends a message to the specified channel
             Usage: slackNotifier send channel= text= [color=] [attachments=]
             ${COLOR_RED}Notes:
@@ -62,37 +67,38 @@ parse   o   Parses the given payload to extract certain values
             Usage: slackNotifier parse payload= field=
             ${COLOR_RED}Notes:
                 The field path must be given in the format below
-                <top_level_element>[.<sub_element>].<element> (EG: status.ok)
-                See JQ (https://stedolan.github.io/jq/manual/) for more details${COLOR_END}
-
+                <top_level_element>[.<sub_element>].<element> (EG: .status.ok)
+                See JQ (https://stedolan.github.io/jq/manual/) for more details
 $COLOR_GREEN
 ---------------------------------------------------------------------------------
     ${TEXT_BOLD}AVAILABLE ACTION PARAMETERS${TEXT_RESET}
 ---------------------------------------------------------------------------------
 $COLOR_END
-channel     - Sets the channel to which the message will be sent
+token       - The oAuth token to be used to send messages. You can skip this if you've run 'slackNotifier token' and set
+              it system wide
 
-ts          - Reference used for replying to message and/or editing/removing messages
+channel     - The channel to which the message will be sent
 
-text        - Text of the message ( Cannot be used together with 'attachments' )
+text        - The text of the message to be sent ( Cannot be used together with 'attachments' )
 
-color       - Sets the color of the message ( Cannot be used together with 'attachments' )
+color       - The color of the message to be sent ( Cannot be used together with 'attachments' )
 
-attachments - Sets the attachments to be sent with the message ( Overrides 'text' and 'color' )
+attachments - The attachments to be sent with the message ( Overrides 'text' and 'color' )
 
-broadcast   - When replying to messages setting this to 'true' will cause the message to also be posted in the main channel
+ts          - The reference used to reply to, edit or remove a message
 
-token       - You can pass the oAuth token to be used in this parameter or alternatively set the token in the '.token' file
-
-payload     - If used with 'parse' action this sets the payload to be parsed (JSON format, see JQ for more details)
-              If used with 'reply' action this has to be the payload of the first message in the thread.
-              If used with 'edit' or 'remove' actions this needs to be the payload of the message to edit or remove respectively.
+payload     - When used with 'reply' action this has to be the payload of the first message in the thread
+            - When used with 'edit' or 'remove' actions this needs to be the payload of the message to edit or remove
+            - When used with 'parse' action this sets the payload to be parsed (JSON format, see JQ for more details)
 
 field       - This sets the 'path' of the field to be extracted when used with 'parse' action, otherwise unavailable
-              See JQ for more details on patterns accepted by 'field'
+            - See JQ for more details on patterns accepted by 'field'
 
+broadcast   - When replying to messages setting this to 'true' will cause the message to also be posted in the main
+              channel
 
 """;
+exit 0
 }
 
 # Slack token filepath (easily configurable by changing this one variable)
@@ -270,13 +276,28 @@ function convertChannelNameToID {
     echo ${channelID}
 }
 
+function setToken {
+    if [[ -e ".token" ]]; then
+        rm ".token"
+    fi
+
+    touch ".token"
+    echo ${SLACK_TOKEN} >> ".token"
+}
+
 # Check if only dependency is installed (JQ)
 checkJQIsInstalled
 
 # First argument should always be the action per the help, fetch it
 SELECTED_ACTION="$1"
+
+# If action wasn't passed in show help page
+if [[ -z ${SELECTED_ACTION} ]]; then
+    printHelp
+fi
+
 # Check action is allowed
-if [[ "$(listIncludesItem 'help send reply edit remove parse' ${SELECTED_ACTION})" = "no" ]]; then
+if [[ "$(listIncludesItem 'help send reply edit remove parse token' ${SELECTED_ACTION})" = "no" ]]; then
     outputError "Action '${SELECTED_ACTION}' is unknown!"
     exit;
 fi
@@ -299,7 +320,7 @@ do
             field)          JSON_FIELD=${VALUE} ;;
             *)
                 # Easy way to ignore actions from being parsed again
-                if [[ "$(listIncludesItem 'help send reply edit remove parse' ${KEY})" = "no" ]]; then
+                if [[ "$(listIncludesItem 'help send reply edit remove parse token' ${KEY})" = "no" ]]; then
                     outputError "Unknown argument '$KEY'!"
                     exit;
                 fi
@@ -322,6 +343,12 @@ fi
 # If token wasn't passed in means it should be in the file, try to fetch it
 if [[ -z ${SLACK_TOKEN} ]]; then
     getSlackToken
+fi
+
+# If token wasn't passed in means it should be in the file, try to fetch it
+if [[ ${SELECTED_ACTION} = "token" ]]; then
+    setToken
+    exit 0
 fi
 
 # Check the token isn't empty
