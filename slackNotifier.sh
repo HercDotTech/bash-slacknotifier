@@ -13,7 +13,7 @@ function printHelp {
     echo -e """$COLOR_BLUE
  ____  _            _    _   _       _   _  __ _
 / ___|| | __ _  ___| | _| \ | | ___ | |_(_)/ _(_) ___ _ __
-\___ \| |/ _\` |/ __| |/ /  \| |/ _ \| __| | |_| |/ _ \ '__|
+\___ \| |/ _\`|/ __| |/ /  \| |/ _ \| __| | |_| |/ _ \ '__|
  ___) | | (_| | (__|   <| |\  | (_) | |_| |  _| |  __/ |
 |____/|_|\__,_|\___|_|\_\_| \_|\___/ \__|_|_| |_|\___|_|$COLOR_END$COLOR_GREEN
 ---------------------------------------------------------------------------------
@@ -22,7 +22,15 @@ https://github.com/herctech/bash-slacknotifier
 ---------------------------------------------------------------------------------
 $COLOR_END
 Usage: ${COLOR_GREEN}slackNotifier <action> <action_parameters>${COLOR_END}
-${COLOR_BLUE}On Ubuntu or Debian install JQ by running 'sudo apt-get install jq'!${COLOR_END}
+${COLOR_BLUE}
+On Ubuntu or Debian:
+    - install JQ by running 'sudo apt-get install jq'
+
+On MacOS:
+    - install brew (https://brew.sh/)
+    - upgrade bash by running 'brew install bash'!
+    - install JQ by running 'brew install jq'!
+${COLOR_END}
 $COLOR_GREEN
 ---------------------------------------------------------------------------------
     ${TEXT_BOLD}AVAILABLE ACTIONS${TEXT_RESET}
