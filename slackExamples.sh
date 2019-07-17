@@ -162,6 +162,6 @@ case "${EXAMPLE}" in
         sendCustomPayload
     ;;
     *)
-        outputError "Something went wrong, unknown example ${EXAMPLE}!"
+        printHelp
     ;;
 esac
